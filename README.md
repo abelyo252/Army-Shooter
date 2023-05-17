@@ -1,7 +1,7 @@
 # Army-Shooter
 
 <p align="center">
-  <img src="https://github.com/abelyo252/AKeyword_Spotting/blob/main/image/keyword_spotter_logo.png">
+  <img src="https://github.com/abelyo252/Army-Shooter/blob/main/resource/army_shooter_logo.png">
 </p>
 
 
@@ -12,16 +12,14 @@ providing accurate shooting capabilities. Easy to use and effective, it's the ul
 ## Installation
 To install the most recent version of Army Shooter, just follow these simple instructions. If git wasn't installed on your Windows PC, get it from `https://gitforwindows.org/` or install it on linux using `sudo apt-get install git` 
 
-`git clone https://github.com/abelyo252/AKeyword_Spotting.git`<br>
+`git clone https://github.com/abelyo252/Army_S.git`<br>
 `cd AKeyword_Spotting/`<br>
 `pip install -r requirements.txt`<br>
-`pip install PyAudio-0.2.11-cp36-cp36m-win_amd64.whl`<br>
+
 
 
 ## Run Code
 
-`$ python key_spotter.py --al 24000 --model "models\model.onnx" --a audio.wav --conf 0.8`<br>
-The output will be a list of detected criminal words, if any. with detected time stamp but if you want to run GUI version with audio spectrum use this instruction but gui part for now is underdevelopment and still has some errors<br>
 `$ python Keyword_Spotter.py`
 <hr>
 
