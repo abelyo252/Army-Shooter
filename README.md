@@ -6,7 +6,8 @@
 
 
 **Army Shooter is a computer vision project for military use. It identifies and targets human poses from a distance**.
-providing accurate shooting capabilities. Easy to use and effective, it's the ultimate tool for precision targeting and gaining the upper hand in combat.[Pygame](https://github.com/pygame), [OpenCV](https://github.com/opencv/opencv) and [Mediapipe](https://github.com/google/mediapipe) libraries. 
+providing accurate shooting capabilities. Easy to use and effective, it's the ultimate tool for precision targeting and gaining the upper hand in combat.  At the core it uses [Pygame](https://github.com/pygame), [OpenCV](https://github.com/opencv/opencv) and [Mediapipe](https://github.com/google/mediapipe) libraries. 
+
 
 
 ## Installation
