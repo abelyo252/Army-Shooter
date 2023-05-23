@@ -7,8 +7,8 @@ import math
 mpDraw = mp.solutions.drawing_utils
 mpPose = mp.solutions.pose
 pose   = mpPose.Pose(static_image_mode= False, smooth_landmarks=True,
-                                     min_detection_confidence=0.5,
-                                     min_tracking_confidence=0.5)
+                                     min_detection_confidence=0.8,
+                                     min_tracking_confidence=0.8)
 
 
 def findPose(img, draw=True, bboxWithHands=False):
