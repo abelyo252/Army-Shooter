@@ -2,6 +2,7 @@
 
 # Import standard modules.
 import sys
+import time
 
 # Import non-standard modules.
 import pygame
@@ -9,12 +10,17 @@ from pygame.locals import *
 import cv2
 import numpy as np
 from utils import trucate
-import time
+
 import utils
+import command
 
 import pygame_widgets
 from pygame_widgets.slider import Slider
 from pygame_widgets.textbox import TextBox
+import serial
+import threading
+import queue
+
 
 class ArmyShooter:
     """
@@ -25,20 +31,41 @@ class ArmyShooter:
         pygame.init()
 
         pygame.font.init()
-        self.font = pygame.font.Font("Fonts/Bahnschrift/BAHNSCHRIFT 6.TTF",18)
+        self.font = pygame.font.Font("Fonts/Bahnschrift/BAHNSCHRIFT 6.TTF",12)
 
         self.SCREEN_WIDTH, self.SCREEN_HEIGHT = SCREEN_WIDTH, SCREEN_HEIGHT
-        self.IP = "http://192.168.17.110:8080/video"
-        self.RES_VID = "res/talk2.mp4"
-        self.cap = cv2.VideoCapture(self.IP)
+        #self.IP = "http://192.168.205.44:4747/video?640x480"
+        self.IP = "http://192.168.205.128:4747/mjpegfeed?640x480"
+        self.RES_VID = "res/style.mp4"
         self.RED_COLOR = (255, 0, 0)
         self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
         self.OFFSET=0
 
 
-        self.slider = Slider(self.screen, 75, 570, 200, 15, min=0, max=100, step=1)
-        self.output = TextBox(self.screen, 278, 563, 30, 30, fontSize=18)
+        self.slider = Slider(self.screen, 75, 450, 200, 15, min=0, max=100, step=1)
+        self.output = TextBox(self.screen, 278, 443, 30, 30, fontSize=18)
         self.output.disable()
+
+        self.PILOT = True
+        self.switcher = True
+        self.q = queue.Queue()
+
+        try:
+            self.cap = cv2.VideoCapture(self.IP)
+            self.ser = serial.Serial('/dev/rfcomm0', 9600)
+            self.ser.reset_input_buffer()
+
+            #t = threading.Thread(target=command.receive_data, args=(self.ser, self.q))
+            #t.daemon = True
+            #t.start()
+            print("Bluetooth and Camera connected successfully")
+        except Exception as e:
+            print("Unable to Connect with Hardware! ", e)
+
+
+
+
+
 
 
 
@@ -59,14 +86,35 @@ class ArmyShooter:
                 # User pressed down on a key
             elif event.type == pygame.KEYDOWN:
 
-                if event.key == pygame.K_LEFT:
-                    print("Left")
-                elif event.key == pygame.K_RIGHT:
-                    print("Right")
-                elif event.key == pygame.K_UP:
-                    print("Up")
-                elif event.key == pygame.K_DOWN:
-                    print("Down")
+                if event.key == pygame.K_m:
+                    self.PILOT = False
+                if event.key == pygame.K_a:
+                    self.PILOT = True
+
+
+                if self.PILOT==False:
+                    if event.key == pygame.K_LEFT:
+                        try:
+                            if self.switcher:
+                                print("Left Command About to Send")
+                                command.left_manual(self.ser)
+                                print("Left Command Executed")
+
+
+                        except Exception as e:
+                            print("Unable to send data", e)
+                    elif event.key == pygame.K_RIGHT:
+                        try:
+                            if self.switcher:
+                                print("Right Command About to Send")
+                                command.right_manual(self.ser)
+                         
+                        except Exception as e:
+                            print("Unable to send data", e)
+                    elif event.key == pygame.K_UP:
+                        print("Up")
+                    elif event.key == pygame.K_DOWN:
+                        print("Down")
 
         pygame_widgets.update(events)
         pygame.display.update()
@@ -87,7 +135,7 @@ class ArmyShooter:
 
 
 
-    def toolbar(self,displayText_upper,displayText_lower):
+    def toolbar(self,displayText_upper,displayText_lower,mode):
 
         # Upper
         fpsd = self.font.render("FPS: "+str(displayText_upper[0]),False,(255,255,255))
@@ -95,69 +143,21 @@ class ArmyShooter:
         inf_t = self.font.render("Inf Time: "+str(displayText_upper[2]), False, (255, 255, 255))
         status = self.font.render("Status : " + str(displayText_upper[3]), False, (255, 255, 255))
 
-        self.screen.blit(fpsd, (15, 10))
-        self.screen.blit(camera, (115, 10))
-        self.screen.blit(inf_t, (298, 10))
-        self.screen.blit(status, (self.SCREEN_WIDTH - 150, 10))
+        self.screen.blit(fpsd, (15, 15))
+        self.screen.blit(camera, (115, 15))
+        self.screen.blit(inf_t, (298, 15))
+        self.screen.blit(status, (self.SCREEN_WIDTH - 100, 15))
 
         # Lower
 
         X_distance = self.font.render("X: "+str(displayText_lower[0]), False, (255, 255, 255))
         Y_distance = self.font.render("Y: "+str(displayText_lower[1]), False, (255, 255, 255))
         R_Direction = self.font.render("RD: "+str(displayText_lower[2]), False, (255, 255, 255))
-        self.screen.blit(X_distance, (330, self.SCREEN_HEIGHT-30))
-        self.screen.blit(Y_distance, (385, self.SCREEN_HEIGHT-30))
-        self.screen.blit(R_Direction, (self.SCREEN_WIDTH - 150, self.SCREEN_HEIGHT-30))
-
-    def boundaryChecker(self, img, shot):
-
-        x, y = shot
-        h, w, _ = img.shape
-
-        if x > (w // 2 - self.OFFSET) and x < (w // 2 + self.OFFSET) \
-                and y > (h // 2 - self.OFFSET) and y < (h // 2 + self.OFFSET):
-            return "Acquired"
-
-        else:
-            return "Tracking"
-
-    def mkDecision(self, img, shot):
-
-
-        cmd1, cmd2 = 0, 0
-
-        x, y = shot
-        h, w, _ = img.shape
-
-        if x > (w // 2 - self.OFFSET) and x < (w // 2 + self.OFFSET) \
-                and y > (h // 2 - self.OFFSET) and y < (h // 2 + self.OFFSET):
-            return cmd1, cmd2
-
-        else:
-
-            if x < (w // 2) and y < (h // 2):
-                cmd1, cmd2 = -1, 1
-                return cmd1, cmd2
-
-            elif x > (w // 2) and y < (h // 2):
-                cmd1, cmd2 = 1, 1
-                return cmd1, cmd2
-            elif x > (w // 2) and y < (h // 2):
-                cmd1, cmd2 = -1, -1
-                return cmd1, cmd2
-            elif x > (w // 2) and y < (h // 2):
-                cmd1, cmd2 = 1, -1
-                return cmd1, cmd2
-
-    def cmdInterpret(self, cmd1, cmd2):
-        if cmd1 == -1 and cmd2 == 1:
-            return "LEFT , DOWN"
-        elif cmd1 == 1 and cmd2 == 1:
-            return "RIGHT , DOWN"
-        elif cmd1 == -1 and cmd2 == -1:
-            return "LEFT , UP"
-        elif cmd1 == -1 and cmd2 == -1:
-            return "RIGHT , UP"
+        Mode_Disp = self.font.render(mode, False, (255, 255, 255))
+        self.screen.blit(X_distance, (330, self.SCREEN_HEIGHT-27))
+        self.screen.blit(Y_distance, (385, self.SCREEN_HEIGHT-27))
+        self.screen.blit(R_Direction, (self.SCREEN_WIDTH - 100, self.SCREEN_HEIGHT-30))
+        self.screen.blit(Mode_Disp, (15, self.SCREEN_HEIGHT - 30))
 
 
     def draw(self):
@@ -168,64 +168,72 @@ class ArmyShooter:
         # Check if camera opened successfully
         if (self.cap.isOpened() == True):
             ret, frame = self.cap.read()
+            cmd1, cmd2 = 0, 0
+            cmdInt = ''
+            res = ''
+
             h, w, _ = frame.shape
+
             self.setTolerance(frame, self.slider.getValue() + 50)
             # cv2.rectangle(frame, start2, end2, (0, 0, 255), -1)
 
             if ret == True:
-                bbox, shot = utils.findPose(frame)
 
-                if isinstance(shot, tuple) and len(shot) == 2:
+                if self.PILOT:
+                    bbox, shot = utils.findPose(frame)
+                    cTime = time.time()
+
+
+                    try:
+
+                        inf_time = cTime - pTime
+                        fps = 1 / inf_time
+                    except:
+                        print("Unable to calculate FPS")
+
+
                     if bbox:
-                        frame = utils.fancyDraw(frame, bbox, (0, 255, 0), shot=True)
-                        cmd1, cmd2 = 0, 0
-                        cmdInt = ''
-                        res = ''
+                        if isinstance(shot, tuple) and len(shot) == 2:
+                            res = command.boundaryChecker(frame, shot, self.OFFSET)
+                            mk_decision_result = command.mkDecision(frame, shot, self.OFFSET)
+                            if mk_decision_result is not None:
+                                cmd1, cmd2 = mk_decision_result
+                                cmdInt = command.cmdInterpret(cmd1, cmd2)
 
-                        res = self.boundaryChecker(frame, shot)
-                        mk_decision_result = self.mkDecision(frame, shot)
-                        if mk_decision_result is not None:
-                            cmd1, cmd2 = mk_decision_result
-                        cmdInt = self.cmdInterpret(cmd1, cmd2)
-                        # cmdInt = str(cmdInt1) + str(cmdInt2)
+                            X = w // 2 - shot[0]
+                            Y = h // 2 - shot[1]
+
+                            frame = utils.fancyDraw(frame, bbox, (0, 255, 0), shot=True)
+                            displayText_upper = [int(fps), "0.0166ms", trucate(inf_time, 4), res]
+                            displayText_lower = [int(X), int(Y), cmdInt]
+                            pTime = cTime
 
                     else:
-                        res = "No obj"
-                        cmdInt = ""
+                        displayText_upper = [int(fps), "0.0166ms", trucate(inf_time, 4), "No Obj"]
+                        displayText_lower = [int(0), int(0), "None"]
+                        pTime = cTime
+
+
+
+                    #frame = cv2.resize(frame, (self.SCREEN_WIDTH, self.SCREEN_HEIGHT), interpolation=cv2.INTER_LINEAR)
+                    self.screen.blit(self.cvimage_to_pygame(frame), (0, 0))
+                    if self.PILOT:
+                        self.toolbar(displayText_upper, displayText_lower, "Auto")
+                    else:
+                        self.toolbar(displayText_upper, displayText_lower, "Man")
+
+
                 else:
-                    res = "No obj"
-                    cmdInt = ""
 
-
-                cTime = time.time()
-
-                try:
-                    X = w // 2 - shot[0]
-                    Y = h // 2 - shot[1]
-
-                    inf_time = cTime - pTime
-
-                    fps = 1 / inf_time
-                    frame = cv2.resize(frame, (self.SCREEN_WIDTH, self.SCREEN_HEIGHT), interpolation=cv2.INTER_LINEAR)
                     self.screen.blit(self.cvimage_to_pygame(frame), (0, 0))
 
 
-                    if res is not None:
-                        displayText_upper = [int(fps), "0.0166ms", trucate(inf_time,4),res]
-                    else:
-                        res = "No Obj"
-                        displayText_upper = [int(fps), "0.0166ms", trucate(inf_time,4), res]
-                    displayText_lower = [int(X), int(Y), cmdInt]
-                    pTime = cTime
-                    self.toolbar(displayText_upper, displayText_lower)
-
-                except:
-                    return 0
-
         else:
-            print("Unable to find Camera")
+            #print("Unable to find Camera")
             self.screen.fill((0, 0, 0))  # Fill the screen with black.
-            self.toolbar()
+
+            Err_Disp = self.font.render("Unable to find Camera  :(" , False, (255, 255, 255))
+            self.screen.blit(Err_Disp, (260, 220))
 
         #pygame.display.flip()
 
@@ -254,5 +262,6 @@ class ArmyShooter:
             dt = fpsClock.tick(fps)
 
 if __name__ == '__main__':
-     aShooter = ArmyShooter(932,601)
+     #aShooter = ArmyShooter(932,601)
+     aShooter = ArmyShooter(640, 480)
      aShooter.runPyGame()
