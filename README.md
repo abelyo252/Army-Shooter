@@ -1,7 +1,7 @@
 # Army-Shooter
 
 <p align="center">
-  <img src="https://github.com/abelyo252/Army-Shooter/blob/main/resource/army_shooter_logo.png">
+  <img src="https://github.com/abelyo252/Army-Shooter/blob/main/resource/PSX_20230601_012726.png">
 </p>
 
 
