@@ -13,7 +13,7 @@ providing accurate shooting capabilities. Easy to use and effective, it's the ul
 ## Installation
 To install the most recent version of Army Shooter, just follow these simple instructions. If git wasn't installed on your Windows PC, get it from `https://gitforwindows.org/` or install it on linux using `sudo apt-get install git` 
 
-`git clone https://github.com/abelyo252/Army_S.git`<br>
+`git clone https://github.com/abelyo252/abelyo252/Army-Shooter.git`<br>
 `cd AKeyword_Spotting/`<br>
 `pip install -r requirements.txt`<br>
 
